@@ -4,7 +4,7 @@ const tls = require('tls')
 const zlib = require('zlib')
 
 function releaseSocket(socket){
-    if(socket!==null&&!socket.destroyed){
+    if(socket&&!socket.destroyed){
         socket.end()
         socket.destroy()
     }
@@ -190,14 +190,12 @@ function socks5HandShake1(socket){
     socket.write(Buffer.from(b))
 }
 
-function tlsHandShake(option,cb){
+function tlsHandShake(option){
     let opt={rejectUnauthorized:false,socket:option.socket}
     if('servername' in option){
         opt.servername=option.servername
     }
-    let tlsSocket=tls.connect(opt,function(){
-        cb(tlsSocket)
-    })
+    let tlsSocket=tls.connect(opt,function(){})
     return tlsSocket
 }
 
@@ -231,8 +229,7 @@ function sendTlsRequest(socket,option,urlInfo,cb){
         _chunkBody:false,
         _chunkTail:false,
     }
-    let tlsSocket=tlsHandShake({socket:socket,servername:urlInfo.host},function(tlsSocket){
-    })
+    let tlsSocket=tlsHandShake({socket:socket,servername:urlInfo.host})
     tlsSocket.on('secureConnect', () => {
         sendRequest(tlsSocket,option,urlInfo)
     })
@@ -270,7 +267,7 @@ function sendHttpsProxyConnect(socket,option,urlInfo){
 function doTlsRequest(socket,option,urlInfo,destInfo,cb){
     let httpsProxyConnecting=false
     let connectResp=Buffer.alloc(0)
-    let tlsSocket=tlsHandShake({socket:socket},function(tlsSocket){})
+    let tlsSocket=tlsHandShake({socket:socket})
     let response={
         headers:{},
         body:null,
@@ -306,9 +303,9 @@ function doTlsRequest(socket,option,urlInfo,destInfo,cb){
             let cr=checkConnectingFromData(connectResp)
             if(cr.statusCode===200 && cr.complete){
                 httpsProxyConnecting=false
-                sendTlsRequest(socket,option,urlInfo,cb)
+                sendTlsRequest(tlsSocket,option,urlInfo,cb)
             }else if(cr.statusCode&&cr.statusCode !==200){
-                releaseSocket(socket)
+                releaseSocket(tlsSocket)
                 cb(new Error(`proxy CONNECT status code:${cr.statusCode}`))
             }
         }else{
@@ -434,7 +431,6 @@ function doRequest(socket,option,urlInfo,destInfo,cb){
                 }
             })
         }
-        //socket.end();
     })
     socket.on('close', () => {
         releaseSocket(socket)
