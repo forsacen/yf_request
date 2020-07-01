@@ -4,6 +4,7 @@
 所以我用socket封装了一个网络库,请求成功或者超时失败会都会直接立即断开所有相关连接,简单粗暴,没有其他复杂机制
 
 const request=require('./yf_request')
+
 request(option,callback) 
 
     /***********************************
