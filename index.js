@@ -452,22 +452,36 @@ function _request(option,cb){
         option.deadline=new Date().getTime()+option.timeout+500
     }
     let urlInfo=url.parse(option.url)
-    if(urlInfo.port==null){
+    if(urlInfo.host===null){
+        cb(new Error(`malformat url: ${option.url}`))
+        return
+    }
+    if(urlInfo.port===null){
         if(urlInfo.protocol==='http:'){
             urlInfo.port=80
         }else if(urlInfo.protocol==='https:'){
             urlInfo.port=443
+        }else{
+            cb(new Error(`malformat url: ${option.url}`))
+            return
         }
     }
     urlInfo.host=urlInfo.host.split(':')[0]
     let proxyInfo=null
     if('proxy' in option){
         proxyInfo=url.parse(option.proxy)
-        if(proxyInfo.port==null){
+        if(proxyInfo.host===null){
+            cb(new Error(`malformat proxy url: ${option.proxy}`))
+            return
+        }
+        if(proxyInfo.port===null){
             if(proxyInfo.protocol==='http:'){
                 proxyInfo.port=80
             }else if(proxyInfo.protocol==='https:'){
                 proxyInfo.port=443
+            }else{
+                cb(new Error(`malformat proxy url: ${option.proxy}`))
+                return
             }
         }
         proxyInfo.host=proxyInfo.host.split(':')[0]
@@ -506,7 +520,12 @@ function _request(option,cb){
         clearTimeout(deadline)
         if(option.redirect&&!err && res.statusCode>300 &&res.statusCode<309){
             if('Location' in res.headers){
-                option.url=res.headers['Location']
+                let newUrlInfo=url.parse(res.headers['Location'])
+                if(newUrlInfo.host ===null){
+                    option.url=`${urlInfo.protocol}//${urlInfo.host}${urlInfo.port===80||urlInfo.port===443?'':urlInfo.port}${res.headers['Location'].startsWith('/')?'':'/'}${res.headers['Location']}`
+                }else{
+                    option.url=res.headers['Location']
+                }
                 _request(option,cb)
             }else{
                 if(err===null){
