@@ -448,9 +448,6 @@ function _request(option,cb){
     if(!('redirect' in option)){
         option.redirect=true//默认开启重定向
     }
-    if(!('deadline' in option)){
-        option.deadline=new Date().getTime()+option.timeout+500
-    }
     let urlInfo=url.parse(option.url)
     if(urlInfo.host===null){
         cb(new Error(`malformat url: ${option.url}`))
@@ -506,11 +503,12 @@ function _request(option,cb){
         cb(e)
         return
     }
+    option.deadline=new Date().getTime()+option.timeout+500
     let deadline=setTimeout(function(){
         if(!socket.destroyed){
             socket.destroy()
         }
-        cb(new Error('socket deadline'))},option.deadline-new Date().getTime())
+        cb(new Error('socket timeout'))},option.deadline-new Date().getTime())
     doRequest(socket,option,urlInfo,destInfo,function(err,res){
         if(complete){
             return
@@ -552,7 +550,6 @@ function _request(option,cb){
  * @param {string|Buffer|Uint8Array} [option.data] POST的数据,如果方法为GET,该选项无效
  * @param {object} [option.headers] 浏览器请求头,默认不带请求头
  * @param {number} [option.timeout] 请求超时时间,单位毫秒,默认15秒
- * @param {number} [option.deadline] 请求deadline,毫秒时间戳,默认now+timeout+500,这个选项为了避免连接成功却卡在收数据没触发timeout error
  * @param {boolean} [option.redirect] 是否重定向,例如302重定向,默认true
  * @param {function} [cb] callback,<function(err,res){}> 完成后的回调函数,res里通常有用的信息是res.headers{object},res.body{Buffer},res.statusCode{number},res.options{object}(就是你请求参数的option)
  *
